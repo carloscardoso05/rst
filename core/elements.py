@@ -81,6 +81,9 @@ class RS3Parser:
             if re.match(r".*[.? !]\s*[\'\"]?\s*", segment.get_tokens()[-1]):
                 sentence_id += 1
             initial_token_id += len(segment.get_tokens())
+            
+        for signal in self.signals.values():
+            self.nodes[signal.source_id].signals.append(signal)
 
     def to_count(self, node: "Node") -> bool:
         # Quando a relname de um nó é None, significa que é a raiz da árvore
@@ -138,6 +141,7 @@ class Node(BaseModel):
     id: int
     parent_id: int | None
     relname: str | None
+    signals: list["Signal"] = Field(default_factory=list)
     parser: RS3Parser = Field(exclude=True)
 
     def is_multinuclear(self) -> bool:
@@ -185,7 +189,6 @@ class Node(BaseModel):
             return None
         return self.parser.relations[self.relname]
 
-    @property
     @computed_field
     def relation(self) -> Relation | None:
         return self.get_relation()
@@ -196,16 +199,24 @@ class Node(BaseModel):
             segments.append(self)
         for child in self.get_children():
             segments.extend(child.get_deep_children_segments())
-        return segments
+        return list(sorted(segments, key=lambda s: s.order))
 
     def get_tokens(self) -> list[str]:
         tokens: list[str] = []
         for segment in self.get_deep_children_segments():
-            tokens.extend(segment.text.split())
+            tokens.extend(segment.inner_text.split())
         return tokens
 
     def get_text(self) -> str:
         return " ".join(self.get_tokens())
+
+    @computed_field
+    def parent_text(self) -> str:
+        return self.get_parent().get_text()
+
+    @computed_field
+    def text(self) -> str:
+        return self.get_text()
 
 
 class Signal(BaseModel):
@@ -218,7 +229,7 @@ class Signal(BaseModel):
     parser: RS3Parser = Field(exclude=True)
 
     def get_tokens(self) -> list[str]:
-        tokens = parser.get_tokens_dict()
+        tokens = self.parser.get_tokens()
         return [tokens[id] for id in self.tokens_ids]
 
     def get_text(self) -> str:
@@ -226,6 +237,10 @@ class Signal(BaseModel):
 
     def get_source(self) -> Node:
         return self.parser.nodes[self.source_id]
+
+    @computed_field
+    def text(self) -> str:
+        return self.get_text()
 
     @classmethod
     def from_element(
@@ -245,7 +260,7 @@ class Signal(BaseModel):
 
 class Segment(Node):
     order: int
-    text: str
+    inner_text: str
     initial_token_id: int = Field(init=False, default=-1)
     sentence_id: int = Field(init=False, default=-1)
 
@@ -266,7 +281,7 @@ class Segment(Node):
             id=id,
             parent_id=parent_id,
             relname=relname,
-            text=element.text or "",
+            inner_text=element.text or "",
             parser=parser,
             order=order,
         )
