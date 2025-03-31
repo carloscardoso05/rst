@@ -1,142 +1,150 @@
-# RS3 Visualizer
+# RST Visualizer
 
-A Python application for parsing and visualizing Rhetorical Structure Theory (RS3) documents. This tool provides an API to access and analyze RS3 files, which contain structured representations of text with rhetorical relationships.
+A modern web application for visualizing Rhetorical Structure Theory (RST) relations in documents. This project consists of a FastAPI backend and a Vue.js frontend with Element Plus UI components.
+
+## Project Structure
+
+```
+.
+├── api/            # Backend FastAPI application
+│   └── routes/     # API route handlers
+├── db/             # Database and repository layer
+├── frontend/       # Vue.js frontend application
+│   ├── src/        # Source code
+│   └── public/     # Static assets
+└── README.md       # This file
+```
 
 ## Features
 
-- Parse RS3 format documents
-- Extract rhetorical structures and relationships
-- Identify intra-sentential relations
-- Process rhetorical signals
-- RESTful API for document access and analysis
+- Document list navigation
+- RST relation visualization
+- Real-time data loading
+- Responsive layout
+- Error handling and loading states
+- Modern UI with Element Plus components
 
-## Installation
+## Prerequisites
 
-The project uses `uv` for Python package management. Make sure you have Python 3.12 or higher installed.
+- Python 3.8+
+- Node.js 16+
+- npm or yarn
 
+## Setup and Installation
+
+### Backend
+
+1. Create a virtual environment and activate it:
 ```bash
-# Install dependencies
-uv pip install -e .
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-## Core Functionality
-
-### RS3 Parser
-
-The core parser (`core/elements.py`) provides the following functionality:
-
-- Parse RS3 XML documents
-- Extract text segments and their relationships
-- Identify rhetorical signals
-- Process intra-sentential relations
-- Handle token management and text extraction
-
-Key classes:
-- `RS3Parser`: Main parser class for RS3 documents
-- `Node`: Base class for document elements
-- `Segment`: Represents text segments
-- `Group`: Represents groups of segments
-- `Signal`: Represents rhetorical signals
-- `Relation`: Represents relationships between elements
-
-### Document Repository
-
-The document repository (`db/documents_repository.py`) manages:
-- Document storage and retrieval
-- File system operations
-- Document metadata management
-
-## API Endpoints
-
-### GET /files/
-
-Lists all available RS3 files in the documents directory.
-
-**Response:**
-```json
-[
-    "filename1.rs3",
-    "filename2.rs3",
-    ...
-]
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
 ```
 
-### GET /files/{filename}
+3. Start the backend server:
+```bash
+uvicorn api.main:app --reload --port 8000
+```
 
-Retrieves detailed information about a specific RS3 file.
+### Frontend
 
-**Response:**
-```json
-{
-    "file_path": "path/to/file.rs3",
-    "intra_sentential_relations": [
-        {
-            "id": 1,
-            "parent_id": 2,
-            "relname": "elaboration",
-            "text": "example text"
-        },
-        ...
-    ]
+1. Navigate to the frontend directory:
+```bash
+cd frontend
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the development server:
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:5173`
+
+## API Documentation
+
+### Endpoints
+
+- `GET /files`: Get a list of all available documents
+- `GET /files/{filename}`: Get RST relations for a specific document
+
+### Response Types
+
+```typescript
+interface Relation {
+  id: number;
+  relname: string | null;
+  text: string;
+  parent_text: string;
+  relation?: {
+    type: string;
+  };
+}
+
+interface DocumentResponse {
+  intra_sentential_relations: Relation[];
 }
 ```
 
+## Frontend Architecture
+
+The frontend is built with Vue 3 and TypeScript, using the Composition API. Key components:
+
+- `App.vue`: Main application component
+  - Document list navigation
+  - Relation visualization
+  - Error handling and loading states
+
+### State Management
+
+- Uses Vue's Composition API with `ref` for reactive state
+- Handles loading states and error messages
+- Manages document selection and relation data
+
+### UI Components
+
+Uses Element Plus components:
+- `el-container` for layout
+- `el-menu` for document navigation
+- `el-card` for content containers
+- `el-alert` for error messages
+- `el-empty` for empty states
+
 ## Development
 
-### Running Tests
+### Adding New Features
 
-The project includes several test commands using `uv`:
+1. Backend:
+   - Add new routes in `api/routes/`
+   - Update repository layer in `db/`
 
-```bash
-# Run all tests
-uv run test
+2. Frontend:
+   - Add new components in `frontend/src/components/`
+   - Update state management in `App.vue`
+   - Add new styles in component's `<style>` section
 
-# Run tests in parallel
-uv run test-parallel
+### Code Style
 
-# Run tests with verbose output
-uv run test-verbose
+- Backend: Follow PEP 8 guidelines
+- Frontend: Follow Vue.js Style Guide
+- Use TypeScript types for all components and functions
 
-# Run tests in parallel with verbose output
-uv run test-parallel-verbose
+## Contributing
 
-# Run API tests specifically
-uv run test-api
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
-# Run a specific test file
-uv run test-file tests/test_api.py
-
-# Run a specific test file in parallel
-uv run test-file-parallel tests/test_api.py
-```
-
-### Project Structure
-
-```
-rst/
-├── api/                    # API layer
-│   ├── routes/            # API endpoints
-│   └── __init__.py
-├── core/                  # Core functionality
-│   ├── elements.py        # RS3 parser and models
-│   └── __init__.py
-├── db/                    # Data layer
-│   ├── documents_repository.py
-│   └── __init__.py
-├── documents/            # RS3 document storage
-├── tests/               # Test files
-└── pyproject.toml       # Project configuration
-```
-
-## Dependencies
-
-- Python >= 3.12
-- FastAPI
-- Pydantic
-- pytest
-- pytest-xdist
-- httpx
-<!-- 
 ## License
 
-[Add your license information here] -->
+[MIT License](LICENSE)

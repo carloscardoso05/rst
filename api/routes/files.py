@@ -9,7 +9,7 @@ from db.documents_repository import (
 router = APIRouter()
 
 
-@router.get("/")
+@router.get("")
 def get_files(
     repo: DocumentsRepository = Depends(create_documents_repository),
 ) -> list[str]:
