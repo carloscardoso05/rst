@@ -5,69 +5,139 @@
     </el-header>
     <el-container>
       <el-aside width="300px">
-        <el-card class="document-list">
-          <template #header>
-            <div class="card-header">
-              <span>Documents</span>
-            </div>
-          </template>
-          <el-menu
-            :default-active="selectedDocument"
-            @select="handleDocumentSelect"
-          >
-            <el-menu-item
-              v-for="doc in documents"
-              :key="doc"
-              :index="doc"
-            >
-              {{ doc }}
-            </el-menu-item>
-          </el-menu>
-          <div v-if="loading" class="loading-container">
-            <el-icon class="is-loading"><Loading /></el-icon>
-          </div>
-        </el-card>
+        <el-tabs>
+          <el-tab-pane label="Documents">
+            <el-card class="document-list">
+              <template #header>
+                <div class="card-header">
+                  <span>Documents</span>
+                </div>
+              </template>
+              <el-menu
+                :default-active="selectedDocument"
+                @select="handleDocumentSelect"
+              >
+                <el-menu-item
+                  v-for="doc in documents"
+                  :key="doc"
+                  :index="doc"
+                >
+                  {{ doc }}
+                </el-menu-item>
+              </el-menu>
+              <div v-if="loading" class="loading-container">
+                <el-icon class="is-loading"><Loading /></el-icon>
+              </div>
+            </el-card>
+          </el-tab-pane>
+          <el-tab-pane label="Relations">
+            <el-card class="relation-types-list">
+              <template #header>
+                <div class="card-header">
+                  <span>Relation Types</span>
+                </div>
+              </template>
+              <el-menu
+                :default-active="selectedRelationType"
+                @select="handleRelationTypeSelect"
+              >
+                <el-menu-item
+                  v-for="type in relationTypes"
+                  :key="type"
+                  :index="type"
+                >
+                  {{ type }}
+                </el-menu-item>
+              </el-menu>
+              <div v-if="loading" class="loading-container">
+                <el-icon class="is-loading"><Loading /></el-icon>
+              </div>
+            </el-card>
+          </el-tab-pane>
+        </el-tabs>
       </el-aside>
       <el-main>
-        <div v-if="selectedDocument" class="document-view">
-          <el-card v-loading="loading">
-            <template #header>
-              <div class="card-header">
-                <span>{{ selectedDocument }}</span>
+        <template v-if="selectedRelationType">
+          <div class="relation-examples">
+            <el-card v-loading="loading">
+              <template #header>
+                <div class="card-header">
+                  <span>Examples of "{{ selectedRelationType }}" relation</span>
+                </div>
+              </template>
+              <div v-if="error" class="error-message">
+                <el-alert
+                  title="Error loading relation examples"
+                  type="error"
+                  :description="error"
+                  show-icon
+                  :closable="false"
+                />
               </div>
-            </template>
-            <div v-if="error" class="error-message">
-              <el-alert
-                title="Error loading relations"
-                type="error"
-                :description="error"
-                show-icon
-                :closable="false"
-              />
-            </div>
-            <div v-else-if="documentRelations.length === 0" class="no-relations">
-              <el-empty description="No relations found for this document" />
-            </div>
-            <div v-else class="relations-container">
-              <div v-for="relation in documentRelations" :key="relation.id" class="relation-item">
-                <el-card class="relation-card">
-                  <div class="relation-header">
-                    <el-tag>{{ relation.relname }}</el-tag>
-                    <span class="relation-type">{{ relation.relation?.type }}</span>
-                  </div>
-                  <div class="relation-content">
-                    <div class="relation-text">{{ relation.text }}</div>
-                    <div v-if="relation.parent_text" class="parent-text">
-                      Parent: {{ relation.parent_text }}
+              <div v-else-if="relationExamples.length === 0" class="no-relations">
+                <el-empty description="No examples found for this relation type" />
+              </div>
+              <div v-else class="relations-container">
+                <div v-for="example in relationExamples" :key="example.document + example.relation.id" class="relation-item">
+                  <el-card class="relation-card">
+                    <div class="relation-header">
+                      <el-tag>{{ example.relation.relname }}</el-tag>
+                      <span class="relation-type">{{ example.relation.relation?.type }}</span>
+                      <el-tag size="small" type="info">{{ example.document }}</el-tag>
                     </div>
-                  </div>
-                </el-card>
+                    <div class="relation-content">
+                      <div class="relation-text">{{ example.relation.text }}</div>
+                      <div v-if="example.relation.parent_text" class="parent-text">
+                        Parent: {{ example.relation.parent_text }}
+                      </div>
+                    </div>
+                  </el-card>
+                </div>
               </div>
-            </div>
-          </el-card>
-        </div>
+            </el-card>
+          </div>
+        </template>
+        <template v-else-if="selectedDocument">
+          <div class="document-view">
+            <el-card v-loading="loading">
+              <template #header>
+                <div class="card-header">
+                  <span>{{ selectedDocument }}</span>
+                </div>
+              </template>
+              <div v-if="error" class="error-message">
+                <el-alert
+                  title="Error loading relations"
+                  type="error"
+                  :description="error"
+                  show-icon
+                  :closable="false"
+                />
+              </div>
+              <div v-else-if="documentRelations.length === 0" class="no-relations">
+                <el-empty description="No relations found for this document" />
+              </div>
+              <div v-else class="relations-container">
+                <div v-for="relation in documentRelations" :key="relation.id" class="relation-item">
+                  <el-card class="relation-card">
+                    <div class="relation-header">
+                      <el-tag>{{ relation.relname }}</el-tag>
+                      <span class="relation-type">{{ relation.relation?.type }}</span>
+                    </div>
+                    <div class="relation-content">
+                      <div class="relation-text">{{ relation.text }}</div>
+                      <div v-if="relation.parent_text" class="parent-text">
+                        Parent: {{ relation.parent_text }}
+                      </div>
+                    </div>
+                  </el-card>
+                </div>
+              </div>
+            </el-card>
+          </div>
+        </template>
         <div v-else class="no-selection">
-          <el-empty description="Select a document to view its relations" />
+          <el-empty description="Select a document or relation type to view details" />
         </div>
       </el-main>
     </el-container>
@@ -89,9 +159,17 @@ interface Relation {
   }
 }
 
+interface RelationExample {
+  document: string
+  relation: Relation
+}
+
 const documents = ref<string[]>([])
 const selectedDocument = ref('')
 const documentRelations = ref<Relation[]>([])
+const relationTypes = ref<string[]>([])
+const selectedRelationType = ref('')
+const relationExamples = ref<RelationExample[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 
@@ -109,8 +187,23 @@ const fetchDocuments = async () => {
   }
 }
 
+const fetchRelationTypes = async () => {
+  loading.value = true
+  error.value = null
+  try {
+    const response = await axios.get('/files/relations/types')
+    relationTypes.value = response.data
+  } catch (err) {
+    error.value = 'Failed to load relation types. Please try again.'
+    console.error('Error fetching relation types:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
 const handleDocumentSelect = async (filename: string) => {
   selectedDocument.value = filename
+  selectedRelationType.value = ''
   loading.value = true
   error.value = null
   try {
@@ -125,8 +218,26 @@ const handleDocumentSelect = async (filename: string) => {
   }
 }
 
+const handleRelationTypeSelect = async (type: string) => {
+  selectedRelationType.value = type
+  selectedDocument.value = ''
+  loading.value = true
+  error.value = null
+  try {
+    const response = await axios.get(`/files/relations/examples/${type}`)
+    relationExamples.value = response.data
+  } catch (err) {
+    error.value = 'Failed to load relation examples. Please try again.'
+    console.error('Error fetching relation examples:', err)
+    relationExamples.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(() => {
   fetchDocuments()
+  fetchRelationTypes()
 })
 </script>
 
@@ -150,8 +261,8 @@ onMounted(() => {
   border-right: 1px solid #e4e7ed;
 }
 
-.document-list {
-  height: calc(100vh - 60px);
+.document-list, .relation-types-list {
+  height: calc(100vh - 120px);
   overflow-y: auto;
   position: relative;
 }
@@ -169,7 +280,7 @@ onMounted(() => {
   align-items: center;
 }
 
-.document-view {
+.document-view, .relation-examples {
   height: 100%;
   padding: 0;
 }
@@ -190,6 +301,7 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
+  flex-wrap: wrap;
 }
 
 .relation-content {
@@ -225,5 +337,10 @@ onMounted(() => {
 
 :deep(.el-card) {
   height: 100%;
+}
+
+:deep(.el-tabs__content) {
+  height: calc(100vh - 120px);
+  overflow-y: auto;
 }
 </style>
