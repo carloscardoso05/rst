@@ -229,8 +229,12 @@ class Signal(BaseModel):
     parser: RS3Parser = Field(exclude=True)
 
     def get_tokens(self) -> list[str]:
-        tokens = self.parser.get_tokens()
-        return [tokens[id] for id in self.tokens_ids]
+        tokens_dict = self.parser.get_tokens_dict()
+        result = []
+        for id in self.tokens_ids:
+            if id in tokens_dict:
+                result.append(tokens_dict[id])
+        return result
 
     def get_text(self) -> str:
         return " ".join(self.get_tokens())
