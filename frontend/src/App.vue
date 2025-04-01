@@ -141,18 +141,33 @@
                   </div>
                 </div>
                 <div v-else class="full-text-view">
-                  <div class="text-content">
-                    {{ fullText }}
+                  <div class="text-content" ref="textContentRef">
+                    <template v-for="(chunk, index) in textChunks" :key="index">
+                      <span
+                        v-if="chunk.type === 'relation'"
+                        :class="{
+                          'relation-highlight': true,
+                          'active': chunk.relationId === activeRelationId
+                        }"
+                        @click="focusRelation(chunk.relationId)"
+                      >{{ chunk.text }}</span>
+                      <template v-else>{{ chunk.text }}</template>
+                    </template>
                   </div>
                   <el-divider>Relations</el-divider>
                   <div class="relations-list">
-                    <el-collapse>
+                    <el-collapse v-model="activeCollapseItems">
                       <el-collapse-item 
                         v-for="relation in documentRelations" 
                         :key="relation.id"
                         :title="relation.relname || 'Unnamed Relation'"
+                        :name="relation.id"
                       >
-                        <div class="relation-detail">
+                        <div 
+                          class="relation-detail"
+                          :class="{ 'active': relation.id === activeRelationId }"
+                          @click="focusRelation(relation.id)"
+                        >
                           <div class="relation-text">
                             <strong>Text:</strong> {{ relation.text }}
                           </div>
@@ -180,7 +195,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { Loading } from '@element-plus/icons-vue'
 import axios from 'axios'
 
@@ -205,6 +220,12 @@ interface DocumentResponse {
   intra_sentential_relations: Relation[]
 }
 
+interface TextChunk {
+  type: 'text' | 'relation'
+  text: string
+  relationId?: number
+}
+
 const documents = ref<string[]>([])
 const selectedDocument = ref('')
 const documentRelations = ref<Relation[]>([])
@@ -215,6 +236,9 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const viewMode = ref<'relations' | 'full'>('relations')
 const fullText = ref('')
+const activeRelationId = ref<number | null>(null)
+const activeCollapseItems = ref<number[]>([])
+const textContentRef = ref<HTMLElement | null>(null)
 
 const fetchDocuments = async () => {
   loading.value = true
@@ -244,6 +268,70 @@ const fetchRelationTypes = async () => {
   }
 }
 
+const createTextChunks = (fullText: string, relations: Relation[]): TextChunk[] => {
+  // Create a sorted array of positions where relations appear in the text
+  const positions: Array<{ start: number; end: number; relation: Relation }> = []
+  
+  relations.forEach(relation => {
+    const index = fullText.indexOf(relation.text)
+    if (index !== -1) {
+      positions.push({
+        start: index,
+        end: index + relation.text.length,
+        relation
+      })
+    }
+  })
+  
+  // Sort positions by start index
+  positions.sort((a, b) => a.start - b.start)
+  
+  const chunks: TextChunk[] = []
+  let lastIndex = 0
+  
+  positions.forEach(pos => {
+    // Add text before the relation if any
+    if (pos.start > lastIndex) {
+      chunks.push({
+        type: 'text',
+        text: fullText.slice(lastIndex, pos.start)
+      })
+    }
+    
+    // Add the relation
+    chunks.push({
+      type: 'relation',
+      text: fullText.slice(pos.start, pos.end),
+      relationId: pos.relation.id
+    })
+    
+    lastIndex = pos.end
+  })
+  
+  // Add remaining text if any
+  if (lastIndex < fullText.length) {
+    chunks.push({
+      type: 'text',
+      text: fullText.slice(lastIndex)
+    })
+  }
+  
+  return chunks
+}
+
+const textChunks = ref<TextChunk[]>([])
+
+const focusRelation = (relationId: number) => {
+  activeRelationId.value = relationId
+  activeCollapseItems.value = [relationId]
+  
+  // Wait for the next tick to ensure the element is rendered
+  nextTick(() => {
+    const element = document.querySelector(`.relation-highlight[data-relation-id="${relationId}"]`)
+    element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  })
+}
+
 const handleDocumentSelect = async (filename: string) => {
   selectedDocument.value = filename
   selectedRelationType.value = ''
@@ -253,11 +341,15 @@ const handleDocumentSelect = async (filename: string) => {
     const response = await axios.get<DocumentResponse>(`/files/${filename}`)
     documentRelations.value = response.data.intra_sentential_relations || []
     fullText.value = response.data.full_text || ''
+    textChunks.value = createTextChunks(fullText.value, documentRelations.value)
+    activeRelationId.value = null
+    activeCollapseItems.value = []
   } catch (err) {
     error.value = 'Failed to load document. Please try again.'
     console.error('Error fetching document:', err)
     documentRelations.value = []
     fullText.value = ''
+    textChunks.value = []
   } finally {
     loading.value = false
   }
@@ -387,6 +479,7 @@ onMounted(() => {
   padding: 20px;
   border-radius: 4px;
   margin-bottom: 20px;
+  line-height: 1.6;
 }
 
 .relations-list {
@@ -394,10 +487,37 @@ onMounted(() => {
 }
 
 .relation-detail {
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  cursor: pointer;
+  padding: 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.relation-detail:hover {
+  background-color: #f5f7fa;
+}
+
+.relation-detail.active {
+  background-color: #ecf5ff;
+  border: 1px solid #409EFF;
+}
+
+.relation-highlight {
+  background-color: rgba(64, 158, 255, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  transition: background-color 0.2s ease;
+}
+
+.relation-highlight:hover {
+  background-color: rgba(64, 158, 255, 0.2);
+}
+
+.relation-highlight.active {
+  background-color: rgba(64, 158, 255, 0.3);
+  outline: 2px solid #409EFF;
 }
 
 :deep(.el-menu) {
