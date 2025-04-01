@@ -21,6 +21,7 @@ def get_all_files(path: str) -> List[str]:
 class Document(BaseModel):
     file_path: str
     intra_sentential_relations: list[Node] = []
+    _parser: RS3Parser | None = None
 
     @property
     @computed_field
@@ -30,6 +31,11 @@ class Document(BaseModel):
     def get_filename(self) -> str:
         return os.path.basename(self.file_path)
 
+    def get_full_text(self) -> str:
+        if not self._parser:
+            self._parser = RS3Parser(self.file_path)
+        return self._parser.get_text()
+
     @model_validator(mode="after")
     def check_file_exists(self) -> Self:
         if not os.path.isfile(self.file_path):
@@ -38,8 +44,9 @@ class Document(BaseModel):
 
 
 def document_from_file(file_path: str) -> Document:
-    relations = RS3Parser(file_path).get_intra_sentential_relations()
-    return Document(file_path=file_path, intra_sentential_relations=relations)
+    parser = RS3Parser(file_path)
+    relations = parser.get_intra_sentential_relations()
+    return Document(file_path=file_path, intra_sentential_relations=relations, _parser=parser)
 
 
 class DocumentsRepository:
