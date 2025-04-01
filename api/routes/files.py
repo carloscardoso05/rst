@@ -20,8 +20,13 @@ def get_files(
 @router.get("/{filename}")
 def get_file_by_id(
     filename: str, repo: DocumentsRepository = Depends(create_documents_repository)
-) -> Document:
-    return repo.documents[filename]
+) -> Dict:
+    doc = repo.documents[filename]
+    return {
+        "filename": doc.get_filename(),
+        "full_text": doc.get_full_text(),
+        "intra_sentential_relations": doc.intra_sentential_relations
+    }
 
 
 @router.get("/relations/types")

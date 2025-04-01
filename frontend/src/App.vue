@@ -103,36 +103,71 @@
               <template #header>
                 <div class="card-header">
                   <span>{{ selectedDocument }}</span>
+                  <el-radio-group v-model="viewMode" size="small">
+                    <el-radio-button label="relations">Relations</el-radio-button>
+                    <el-radio-button label="full">Full Text</el-radio-button>
+                  </el-radio-group>
                 </div>
               </template>
               <div v-if="error" class="error-message">
                 <el-alert
-                  title="Error loading relations"
+                  title="Error loading document"
                   type="error"
                   :description="error"
                   show-icon
                   :closable="false"
                 />
               </div>
-              <div v-else-if="documentRelations.length === 0" class="no-relations">
-                <el-empty description="No relations found for this document" />
-              </div>
-              <div v-else class="relations-container">
-                <div v-for="relation in documentRelations" :key="relation.id" class="relation-item">
-                  <el-card class="relation-card">
-                    <div class="relation-header">
-                      <el-tag>{{ relation.relname }}</el-tag>
-                      <span class="relation-type">{{ relation.relation?.type }}</span>
+              <template v-else>
+                <div v-if="viewMode === 'relations'" class="relations-view">
+                  <div v-if="documentRelations.length === 0" class="no-relations">
+                    <el-empty description="No relations found for this document" />
+                  </div>
+                  <div v-else class="relations-container">
+                    <div v-for="relation in documentRelations" :key="relation.id" class="relation-item">
+                      <el-card class="relation-card">
+                        <div class="relation-header">
+                          <el-tag>{{ relation.relname }}</el-tag>
+                          <span class="relation-type">{{ relation.relation?.type }}</span>
+                        </div>
+                        <div class="relation-content">
+                          <div class="relation-text">{{ relation.text }}</div>
+                          <div v-if="relation.parent_text" class="parent-text">
+                            Parent: {{ relation.parent_text }}
+                          </div>
+                        </div>
+                      </el-card>
                     </div>
-                    <div class="relation-content">
-                      <div class="relation-text">{{ relation.text }}</div>
-                      <div v-if="relation.parent_text" class="parent-text">
-                        Parent: {{ relation.parent_text }}
-                      </div>
-                    </div>
-                  </el-card>
+                  </div>
                 </div>
-              </div>
+                <div v-else class="full-text-view">
+                  <div class="text-content">
+                    {{ fullText }}
+                  </div>
+                  <el-divider>Relations</el-divider>
+                  <div class="relations-list">
+                    <el-collapse>
+                      <el-collapse-item 
+                        v-for="relation in documentRelations" 
+                        :key="relation.id"
+                        :title="relation.relname || 'Unnamed Relation'"
+                      >
+                        <div class="relation-detail">
+                          <div class="relation-text">
+                            <strong>Text:</strong> {{ relation.text }}
+                          </div>
+                          <div v-if="relation.parent_text" class="parent-text">
+                            <strong>Parent:</strong> {{ relation.parent_text }}
+                          </div>
+                          <div v-if="relation.relation?.type" class="relation-type">
+                            <strong>Type:</strong> {{ relation.relation.type }}
+                          </div>
+                        </div>
+                      </el-collapse-item>
+                    </el-collapse>
+                  </div>
+                </div>
+              </template>
             </el-card>
           </div>
         </template>
@@ -164,6 +199,12 @@ interface RelationExample {
   relation: Relation
 }
 
+interface DocumentResponse {
+  filename: string
+  full_text: string
+  intra_sentential_relations: Relation[]
+}
+
 const documents = ref<string[]>([])
 const selectedDocument = ref('')
 const documentRelations = ref<Relation[]>([])
@@ -172,6 +213,8 @@ const selectedRelationType = ref('')
 const relationExamples = ref<RelationExample[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
+const viewMode = ref<'relations' | 'full'>('relations')
+const fullText = ref('')
 
 const fetchDocuments = async () => {
   loading.value = true
@@ -207,12 +250,14 @@ const handleDocumentSelect = async (filename: string) => {
   loading.value = true
   error.value = null
   try {
-    const response = await axios.get(`/files/${filename}`)
+    const response = await axios.get<DocumentResponse>(`/files/${filename}`)
     documentRelations.value = response.data.intra_sentential_relations || []
+    fullText.value = response.data.full_text || ''
   } catch (err) {
-    error.value = 'Failed to load document relations. Please try again.'
-    console.error('Error fetching document relations:', err)
+    error.value = 'Failed to load document. Please try again.'
+    console.error('Error fetching document:', err)
     documentRelations.value = []
+    fullText.value = ''
   } finally {
     loading.value = false
   }
@@ -331,6 +376,30 @@ onMounted(() => {
   padding: 20px;
 }
 
+.full-text-view {
+  padding: 20px;
+}
+
+.text-content {
+  white-space: pre-wrap;
+  font-family: monospace;
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.relations-list {
+  margin-top: 20px;
+}
+
+.relation-detail {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 :deep(.el-menu) {
   border-right: none;
 }
@@ -342,5 +411,9 @@ onMounted(() => {
 :deep(.el-tabs__content) {
   height: calc(100vh - 120px);
   overflow-y: auto;
+}
+
+:deep(.el-collapse-item__content) {
+  padding-bottom: 12px;
 }
 </style>
