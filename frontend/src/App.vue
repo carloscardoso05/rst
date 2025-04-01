@@ -91,6 +91,15 @@
                         Parent: {{ example.relation.parent_text }}
                       </div>
                     </div>
+                    <div class="relation-actions">
+                      <el-button 
+                        type="primary" 
+                        link 
+                        @click="showInFullTextFromExample(example.document, example.relation.id)"
+                      >
+                        Show in text
+                      </el-button>
+                    </div>
                   </el-card>
                 </div>
               </div>
@@ -136,6 +145,15 @@
                             Parent: {{ relation.parent_text }}
                           </div>
                         </div>
+                        <div class="relation-actions">
+                          <el-button 
+                            type="primary" 
+                            link 
+                            @click="showInFullText(relation.id)"
+                          >
+                            Show in text
+                          </el-button>
+                        </div>
                       </el-card>
                     </div>
                   </div>
@@ -149,6 +167,7 @@
                           'relation-highlight': true,
                           'active': chunk.relationId === activeRelationId
                         }"
+                        :data-relation-id="chunk.relationId"
                         @click="focusRelation(chunk.relationId)"
                       >{{ chunk.text }}</span>
                       <template v-else>{{ chunk.text }}</template>
@@ -198,6 +217,7 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { Loading } from '@element-plus/icons-vue'
 import axios from 'axios'
+import { ElMessage } from 'element-plus'
 
 interface Relation {
   id: number
@@ -321,18 +341,7 @@ const createTextChunks = (fullText: string, relations: Relation[]): TextChunk[] 
 
 const textChunks = ref<TextChunk[]>([])
 
-const focusRelation = (relationId: number) => {
-  activeRelationId.value = relationId
-  activeCollapseItems.value = [relationId]
-  
-  // Wait for the next tick to ensure the element is rendered
-  nextTick(() => {
-    const element = document.querySelector(`.relation-highlight[data-relation-id="${relationId}"]`)
-    element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  })
-}
-
-const handleDocumentSelect = async (filename: string) => {
+const handleDocumentSelect = async (filename: string): Promise<void> => {
   selectedDocument.value = filename
   selectedRelationType.value = ''
   loading.value = true
@@ -350,9 +359,44 @@ const handleDocumentSelect = async (filename: string) => {
     documentRelations.value = []
     fullText.value = ''
     textChunks.value = []
+    throw err // Re-throw the error so we can handle it in the calling function
   } finally {
     loading.value = false
   }
+}
+
+const showInFullTextFromExample = async (filename: string, relationId: number) => {
+  try {
+    // First load the document
+    await handleDocumentSelect(filename)
+    // Then switch to full text view and focus the relation
+    nextTick(() => {
+      showInFullText(relationId)
+    })
+  } catch (err) {
+    // If there's an error loading the document, show an error message
+    ElMessage.error('Failed to load document. Please try again.')
+  }
+}
+
+const showInFullText = (relationId: number) => {
+  viewMode.value = 'full'
+  nextTick(() => {
+    focusRelation(relationId)
+  })
+}
+
+const focusRelation = (relationId: number) => {
+  activeRelationId.value = relationId
+  activeCollapseItems.value = [relationId]
+  
+  // Wait for the next tick to ensure the element is rendered
+  nextTick(() => {
+    const element = document.querySelector(`[data-relation-id="${relationId}"]`)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  })
 }
 
 const handleRelationTypeSelect = async (type: string) => {
@@ -535,5 +579,11 @@ onMounted(() => {
 
 :deep(.el-collapse-item__content) {
   padding-bottom: 12px;
+}
+
+.relation-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
 }
 </style>
