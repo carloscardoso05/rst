@@ -82,6 +82,7 @@
                         :key="`${signalType}-${signalSubtype}`"
                         :title="signalSubtype"
                         :name="signalSubtype"
+                        class="subtype-item"
                       >
                         <!-- Third level: Relations -->
                         <el-menu class="relation-menu">
@@ -90,6 +91,7 @@
                             :key="`${signalType}-${signalSubtype}-${relationName}`"
                             :index="relationName"
                             @click="handleGroupedRelationSelect(signalType, signalSubtype, relationName)"
+                            class="relation-menu-item"
                           >
                             <span>{{ relationName }}</span>
                             <el-badge :value="count" class="relation-count" />
@@ -778,5 +780,16 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+/* Indentation styles for the hierarchy */
+.subtype-item :deep(.el-collapse-item__header) {
+  padding-left: 15px;
+  font-size: 0.95em;
+}
+
+.relation-menu-item {
+  padding-left: 15px !important;
+  font-size: 0.9em;
 }
 </style>
