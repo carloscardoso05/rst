@@ -68,7 +68,11 @@
                 <el-empty description="No relation groups found" />
               </div>
               <div v-else class="relation-groups">
-                <el-collapse accordion>
+                <el-collapse 
+                  accordion
+                  v-model="expandedSignalTypes"
+                  @change="handleCollapseChange"
+                >
                   <el-collapse-item 
                     v-for="(subtypes, signalType) in groupedRelations" 
                     :key="signalType"
@@ -76,7 +80,11 @@
                     :name="signalType"
                   >
                     <!-- Second level: Signal Subtype -->
-                    <el-collapse accordion>
+                    <el-collapse 
+                      accordion
+                      v-model="expandedSubtypes[signalType]"
+                      @change="keys => handleSubtypeCollapseChange(signalType, keys)"
+                    >
                       <el-collapse-item
                         v-for="(relations, signalSubtype) in subtypes"
                         :key="`${signalType}-${signalSubtype}`"
@@ -329,6 +337,7 @@ interface GroupedRelations {
   }
 }
 
+// State for document and relation data
 const documents = ref<string[]>([])
 const selectedDocument = ref('')
 const documentRelations = ref<Relation[]>([])
@@ -346,6 +355,22 @@ const fullText = ref('')
 const activeRelationId = ref<number | null>(null)
 const activeCollapseItems = ref<number[]>([])
 const textContentRef = ref<HTMLElement | null>(null)
+
+// State for preserving accordion expansion
+const expandedSignalTypes = ref<string[]>([])
+const expandedSubtypes = ref<{[key: string]: string[]}>({})
+
+// Handlers for accordion state management
+const handleCollapseChange = (keys: string[]) => {
+  expandedSignalTypes.value = keys;
+}
+
+const handleSubtypeCollapseChange = (signalType: string, keys: string[]) => {
+  if (!expandedSubtypes.value[signalType]) {
+    expandedSubtypes.value[signalType] = [];
+  }
+  expandedSubtypes.value[signalType] = keys;
+}
 
 const fetchDocuments = async () => {
   loading.value = true
@@ -401,14 +426,11 @@ const handleSignalSubtypeSelect = (subtype: string) => {
 }
 
 const handleGroupedRelationSelect = async (type: string, subtype: string, relation: string) => {
-  selectedSignalType.value = type
-  selectedSignalSubtype.value = subtype
-  selectedRelationName.value = relation
-  selectedRelationType.value = ''
-  selectedDocument.value = ''
+  // Create local variables for loading state to avoid triggering sidebar re-render
+  let isLoading = true;
+  let localError = null;
+  let results = [];
   
-  loading.value = true
-  error.value = null
   try {
     const response = await axios.get('/files/relations/grouped/examples', {
       params: {
@@ -416,15 +438,35 @@ const handleGroupedRelationSelect = async (type: string, subtype: string, relati
         signal_subtype: subtype !== 'No Subtype' ? subtype : null,
         relation_name: relation
       }
-    })
-    relationExamples.value = response.data
+    });
+    results = response.data;
   } catch (err) {
-    error.value = 'Failed to load relation examples. Please try again.'
-    console.error('Error fetching relation examples:', err)
-    relationExamples.value = []
+    localError = 'Failed to load relation examples. Please try again.';
+    console.error('Error fetching relation examples:', err);
   } finally {
-    loading.value = false
+    isLoading = false;
   }
+  
+  // Only update state variables after the request is complete
+  // This batches our reactive updates to minimize re-renders
+  nextTick(() => {
+    // First update the main content area data
+    relationExamples.value = results;
+    error.value = localError;
+    
+    // Then update the selection state
+    selectedRelationName.value = relation;
+    selectedSignalType.value = type;
+    selectedSignalSubtype.value = subtype;
+    selectedRelationType.value = '';
+    selectedDocument.value = '';
+    
+    // Finally update the loading state last to avoid flickering
+    loading.value = false;
+  });
+  
+  // Show loading state immediately but only in the main content area
+  loading.value = true;
 }
 
 const createTextChunks = (fullText: string, relations: Relation[]): TextChunk[] => {
@@ -483,6 +525,9 @@ const textChunks = ref<TextChunk[]>([])
 const handleDocumentSelect = async (filename: string): Promise<void> => {
   selectedDocument.value = filename
   selectedRelationType.value = ''
+  selectedRelationName.value = ''  // Clear this as well
+  selectedSignalType.value = ''     // Clear signal type to avoid conflicting state
+  selectedSignalSubtype.value = ''  // Clear signal subtype to avoid conflicting state
   loading.value = true
   error.value = null
   try {
@@ -506,15 +551,28 @@ const handleDocumentSelect = async (filename: string): Promise<void> => {
 
 const showInFullTextFromExample = async (filename: string, relationId: number) => {
   try {
+    loading.value = true;
+    
     // First load the document
     await handleDocumentSelect(filename)
+    
     // Then switch to full text view and focus the relation
     nextTick(() => {
-      showInFullText(relationId)
+      // Set view mode to full text
+      viewMode.value = 'full'
+      
+      // Use another nextTick to ensure the view has updated
+      nextTick(() => {
+        // Focus on the relation after the view has updated
+        focusRelation(relationId)
+      })
     })
   } catch (err) {
     // If there's an error loading the document, show an error message
     ElMessage.error('Failed to load document. Please try again.')
+    console.error('Error showing relation in full text:', err)
+  } finally {
+    loading.value = false;
   }
 }
 
