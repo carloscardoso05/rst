@@ -54,15 +54,73 @@
               </div>
             </el-card>
           </el-tab-pane>
+          <el-tab-pane label="Grouped Relations">
+            <el-card class="relation-groups-list">
+              <template #header>
+                <div class="card-header">
+                  <span>Relation Groups</span>
+                </div>
+              </template>
+              <div v-if="loading" class="loading-container">
+                <el-icon class="is-loading"><Loading /></el-icon>
+              </div>
+              <div v-else-if="Object.keys(groupedRelations).length === 0" class="no-relations">
+                <el-empty description="No relation groups found" />
+              </div>
+              <div v-else class="relation-groups">
+                <el-collapse accordion>
+                  <el-collapse-item 
+                    v-for="(subtypes, signalType) in groupedRelations" 
+                    :key="signalType"
+                    :title="signalType"
+                    :name="signalType"
+                  >
+                    <!-- Second level: Signal Subtype -->
+                    <el-collapse accordion>
+                      <el-collapse-item
+                        v-for="(relations, signalSubtype) in subtypes"
+                        :key="`${signalType}-${signalSubtype}`"
+                        :title="signalSubtype"
+                        :name="signalSubtype"
+                      >
+                        <!-- Third level: Relations -->
+                        <el-menu class="relation-menu">
+                          <el-menu-item
+                            v-for="(count, relationName) in relations"
+                            :key="`${signalType}-${signalSubtype}-${relationName}`"
+                            :index="relationName"
+                            @click="handleGroupedRelationSelect(signalType, signalSubtype, relationName)"
+                          >
+                            <span>{{ relationName }}</span>
+                            <el-badge :value="count" class="relation-count" />
+                          </el-menu-item>
+                        </el-menu>
+                      </el-collapse-item>
+                    </el-collapse>
+                  </el-collapse-item>
+                </el-collapse>
+              </div>
+            </el-card>
+          </el-tab-pane>
         </el-tabs>
       </el-aside>
       <el-main>
-        <template v-if="selectedRelationType">
+        <template v-if="selectedRelationType || selectedRelationName">
           <div class="relation-examples">
             <el-card v-loading="loading">
               <template #header>
                 <div class="card-header">
-                  <span>Examples of "{{ selectedRelationType }}" relation</span>
+                  <span>
+                    {{selectedRelationName ? 
+                      `Examples of "${selectedRelationName}" relation` + 
+                      (selectedSignalType !== 'No Signal' ? 
+                        ` with signal type "${selectedSignalType}"` +
+                        (selectedSignalSubtype !== 'No Subtype' ? ` and subtype "${selectedSignalSubtype}"` : '')
+                        : '')
+                      : 
+                      `Examples of "${selectedRelationType}" relation`
+                    }}
+                  </span>
                 </div>
               </template>
               <div v-if="error" class="error-message">
@@ -89,6 +147,12 @@
                       <div class="relation-text">{{ example.relation.text }}</div>
                       <div v-if="example.relation.parent_text" class="parent-text">
                         Parent: {{ example.relation.parent_text }}
+                      </div>
+                      <div v-if="example.relation.signals && example.relation.signals.length > 0" class="signals-container">
+                        <div v-for="signal in example.relation.signals" :key="signal.id" class="signal-item">
+                          <strong>Signal:</strong> Type: {{ signal.type }}, Subtype: {{ signal.subtype }}
+                          <div v-if="signal.text" class="signal-text">Text: {{ signal.text }}</div>
+                        </div>
                       </div>
                     </div>
                     <div class="relation-actions">
@@ -215,7 +279,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
-import { Loading } from '@element-plus/icons-vue'
+import { Loading, ArrowRight } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
@@ -227,6 +291,15 @@ interface Relation {
   relation?: {
     type: string
   }
+  signals?: Signal[]
+}
+
+interface Signal {
+  id: number
+  source_id: number
+  type: string
+  subtype: string
+  text: string
 }
 
 interface RelationExample {
@@ -246,12 +319,24 @@ interface TextChunk {
   relationId?: number
 }
 
+interface GroupedRelations {
+  [signalType: string]: {
+    [signalSubtype: string]: {
+      [relationName: string]: number
+    }
+  }
+}
+
 const documents = ref<string[]>([])
 const selectedDocument = ref('')
 const documentRelations = ref<Relation[]>([])
 const relationTypes = ref<string[]>([])
 const selectedRelationType = ref('')
 const relationExamples = ref<RelationExample[]>([])
+const groupedRelations = ref<GroupedRelations>({})
+const selectedSignalType = ref('')
+const selectedSignalSubtype = ref('')
+const selectedRelationName = ref('')
 const loading = ref(false)
 const error = ref<string | null>(null)
 const viewMode = ref<'relations' | 'full'>('relations')
@@ -283,6 +368,58 @@ const fetchRelationTypes = async () => {
   } catch (err) {
     error.value = 'Failed to load relation types. Please try again.'
     console.error('Error fetching relation types:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+const fetchGroupedRelations = async () => {
+  loading.value = true
+  error.value = null
+  try {
+    const response = await axios.get('/files/relations/grouped')
+    groupedRelations.value = response.data
+  } catch (err) {
+    error.value = 'Failed to load relation groups. Please try again.'
+    console.error('Error fetching relation groups:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleSignalTypeSelect = (type: string) => {
+  selectedSignalType.value = type
+  selectedSignalSubtype.value = ''
+  selectedRelationName.value = ''
+}
+
+const handleSignalSubtypeSelect = (subtype: string) => {
+  selectedSignalSubtype.value = subtype
+  selectedRelationName.value = ''
+}
+
+const handleGroupedRelationSelect = async (type: string, subtype: string, relation: string) => {
+  selectedSignalType.value = type
+  selectedSignalSubtype.value = subtype
+  selectedRelationName.value = relation
+  selectedRelationType.value = ''
+  selectedDocument.value = ''
+  
+  loading.value = true
+  error.value = null
+  try {
+    const response = await axios.get('/files/relations/grouped/examples', {
+      params: {
+        signal_type: type !== 'No Signal' ? type : null,
+        signal_subtype: subtype !== 'No Subtype' ? subtype : null,
+        relation_name: relation
+      }
+    })
+    relationExamples.value = response.data
+  } catch (err) {
+    error.value = 'Failed to load relation examples. Please try again.'
+    console.error('Error fetching relation examples:', err)
+    relationExamples.value = []
   } finally {
     loading.value = false
   }
@@ -419,6 +556,7 @@ const handleRelationTypeSelect = async (type: string) => {
 onMounted(() => {
   fetchDocuments()
   fetchRelationTypes()
+  fetchGroupedRelations()
 })
 </script>
 
@@ -442,7 +580,7 @@ onMounted(() => {
   border-right: 1px solid #e4e7ed;
 }
 
-.document-list, .relation-types-list {
+.document-list, .relation-types-list, .relation-groups-list {
   height: calc(100vh - 120px);
   overflow-y: auto;
   position: relative;
@@ -498,6 +636,23 @@ onMounted(() => {
 .parent-text {
   color: #666;
   font-size: 0.9em;
+}
+
+.signals-container {
+  margin-top: 8px;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.signal-item {
+  padding: 4px 0;
+  font-size: 0.9em;
+}
+
+.signal-text {
+  margin-top: 2px;
+  color: #666;
 }
 
 .no-selection, .no-relations {
@@ -585,5 +740,43 @@ onMounted(() => {
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
+}
+
+.relation-groups {
+  padding: 10px 0;
+}
+
+.relation-menu {
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.relation-count {
+  margin-left: auto;
+}
+
+:deep(.el-collapse) {
+  border: none;
+}
+
+:deep(.el-collapse-item__wrap) {
+  border-bottom: none;
+}
+
+:deep(.el-collapse-item__header) {
+  font-weight: 500;
+  color: #606266;
+}
+
+:deep(.el-collapse-item__header:hover) {
+  color: #409EFF;
+}
+
+:deep(.el-menu-item) {
+  height: 36px;
+  line-height: 36px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 </style>
