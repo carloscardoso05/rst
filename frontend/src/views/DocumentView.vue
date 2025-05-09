@@ -29,9 +29,8 @@
         <a :class="['tab', 'tab-bordered', { 'tab-active': activeTab === 'relations' }]" 
            @click="setActiveTab('relations')">Relations View</a>
       </div>
-      
-      <!-- Full Text View -->
-      <div v-if="activeTab === 'full-text'" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Full Text View -->
+      <div v-if="activeTab === 'full-text'" class="flex flex-col gap-8">
         <div class="card bg-base-100 shadow-xl">
           <div class="card-body">
             <h2 class="card-title">Full Text</h2>
@@ -43,12 +42,14 @@
           </div>
         </div>
         
-        <div>
-          <RelationsList 
-            :relations="document.intra_sentential_relations"
-            @scroll-to-text="scrollToText"
-            ref="relationsListRef"
-          />
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <RelationsList 
+              :relations="document.intra_sentential_relations"
+              @scroll-to-text="scrollToText"
+              ref="relationsListRef"
+            />
+          </div>
         </div>
       </div>
       

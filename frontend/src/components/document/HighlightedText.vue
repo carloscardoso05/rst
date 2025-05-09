@@ -3,8 +3,8 @@
     <p v-if="isHighlighting">
       <span v-for="(part, index) in textParts" :key="index" 
         :class="{ 
-          'bg-accent text-accent-content cursor-pointer': part.isHighlighted,
-          'hover:bg-accent hover:text-accent-content hover:cursor-pointer': part.isHighlighted 
+          // 'bg-teal-300/20 text-accent-content cursor-pointer': part.isHighlighted,
+          'hover:bg-teal-300/30 transition-colors hover:text-accent-content hover:cursor-pointer': part.isHighlighted 
         }"
         @click="part.isHighlighted ? scrollToRelation(part.relationId) : null">
         {{ part.text }}
