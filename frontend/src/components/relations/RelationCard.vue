@@ -15,7 +15,7 @@
       
       <div class="card-actions justify-end mt-4">
         <RouterLink :to="`/document/${encodeURIComponent(document)}`" class="btn btn-primary btn-sm">
-          View Document
+          Ver documento
         </RouterLink>
       </div>
     </div>

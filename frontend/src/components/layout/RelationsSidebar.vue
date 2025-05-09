@@ -1,12 +1,12 @@
 <template>
   <ul class="menu p-4 w-80 min-h-full bg-base-200 text-base-content">
     <li>
-      <RouterLink to="/">Back to Documents</RouterLink>
+      <RouterLink to="/">Voltar para documentos</RouterLink>
     </li>
-    <li class="menu-title">Signal Types</li>
+    <li class="menu-title">Tipos de sinais</li>
     
     <template v-if="isLoading">
-      <li><span class="loading loading-spinner"></span> Loading...</li>
+      <li><span class="loading loading-spinner"></span> Carregando...</li>
     </template>
     
     <template v-else-if="error">

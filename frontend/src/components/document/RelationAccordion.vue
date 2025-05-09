@@ -8,17 +8,17 @@
     <div class="collapse-content">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <h3 class="font-bold">Text:</h3>
+          <h3 class="font-bold">Texto:</h3>
           <p>{{ relation.text }}</p>
         </div>
         <div>
-          <h3 class="font-bold">Parent Text:</h3>
+          <h3 class="font-bold">Texto do nó pai:</h3>
           <p>{{ relation.parent_text || 'No parent text' }}</p>
         </div>
       </div>
       
       <div class="mt-4">
-        <h3 class="font-bold">Signals:</h3>
+        <h3 class="font-bold">Sinais:</h3>
         <div v-if="relation.signals && relation.signals.length > 0">
           <div v-for="signal in relation.signals" :key="signal.id" class="mt-2">
             <div class="badge badge-outline mr-2">{{ signal.type || 'No type' }}</div>
@@ -26,12 +26,12 @@
             <span>{{ signal.text || 'No text' }}</span>
           </div>
         </div>
-        <p v-else>No signals</p>
+        <p v-else>Sem sinais</p>
       </div>
       
       <div class="mt-4">
         <button @click="scrollToTextPosition" class="btn btn-sm btn-primary">
-          Find in text
+          Ver no texto
         </button>
       </div>
     </div>

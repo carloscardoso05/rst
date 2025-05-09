@@ -14,27 +14,27 @@
     </div>
     
     <div v-else>
-      <h1 class="text-3xl font-bold mb-6">Relations Explorer</h1>
+      <h1 class="text-3xl font-bold mb-6">Pesquisa de relações</h1>
       
       <div class="flex flex-col md:flex-row gap-4 mb-6">
         <div v-if="selectedSignalType" class="badge badge-lg p-4">
-          Type: {{ selectedSignalType }}
+          Tipo: {{ selectedSignalType }}
           <button class="btn btn-xs btn-ghost" @click="clearSignalType">×</button>
         </div>
         
         <div v-if="selectedSignalSubtype" class="badge badge-lg p-4">
-          Subtype: {{ selectedSignalSubtype }}
+          Subtipo: {{ selectedSignalSubtype }}
           <button class="btn btn-xs btn-ghost" @click="clearSignalSubtype">×</button>
         </div>
         
         <div v-if="selectedRelationName" class="badge badge-lg p-4">
-          Relation: {{ selectedRelationName }}
+          Relação: {{ selectedRelationName }}
           <button class="btn btn-xs btn-ghost" @click="clearRelationName">×</button>
         </div>
       </div>
       
       <div v-if="hasSelection">
-        <h2 class="text-2xl font-bold mb-4">Examples</h2>
+        <h2 class="text-2xl font-bold mb-4">Exemplos</h2>
         <RelationsGrid :examples="currentExamples" />
       </div>
       

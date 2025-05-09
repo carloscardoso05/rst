@@ -14,24 +14,8 @@
     </div>
     
     <div v-else>
-      <h1 class="text-3xl font-bold mb-6">Welcome to RST Visualizer</h1>
-      
-      <div class="card bg-base-200 shadow-xl">
-        <div class="card-body">
-          <h2 class="card-title">Get Started</h2>
-          <p>Select a document from the sidebar to view its RST structure.</p>
-          <p class="mt-2">Or explore the relations by type using the Relations Explorer.</p>
-          
-          <div class="card-actions justify-end mt-4">
-            <RouterLink to="/relations" class="btn btn-primary">
-              Relations Explorer
-            </RouterLink>
-          </div>
-        </div>
-      </div>
-      
       <div class="mt-6">
-        <h2 class="text-2xl font-bold mb-4">Available Documents ({{ documents.length }})</h2>
+        <h2 class="text-2xl font-bold mb-4">Documentos ({{ documents.length }})</h2>
         
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div v-for="doc in documents" :key="doc" class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
@@ -39,7 +23,7 @@
               <h3 class="card-title">{{ doc }}</h3>
               <div class="card-actions justify-end">
                 <RouterLink :to="`/document/${encodeURIComponent(doc)}`" class="btn btn-primary btn-sm">
-                  View Document
+                  Ver documento
                 </RouterLink>
               </div>
             </div>
