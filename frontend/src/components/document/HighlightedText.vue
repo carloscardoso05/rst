@@ -3,10 +3,10 @@
     <p v-if="isHighlighting">
       <span v-for="(part, index) in textParts" :key="index" 
         :class="{ 
-          // 'bg-teal-300/20 text-accent-content cursor-pointer': part.isHighlighted,
+          'bg-teal-300/20 text-accent-content cursor-pointer': part.isHighlighted && part.relationId === selectedRelationId,
           'hover:bg-teal-300/30 transition-colors hover:text-accent-content hover:cursor-pointer': part.isHighlighted 
         }"
-        @click="part.isHighlighted ? scrollToRelation(part.relationId) : null">
+        @click="part.isHighlighted ? handleRelationClick(part.relationId) : null">
         {{ part.text }}
       </span>
     </p>
@@ -24,6 +24,7 @@ const props = defineProps<{
 }>();
 
 const isHighlighting = ref(true);
+const selectedRelationId = ref<number | null>(null);
 const emit = defineEmits<{
   (e: 'scrollToRelation', relationId: number): void;
 }>();
@@ -86,9 +87,33 @@ const textParts = computed(() => {
   return parts;
 });
 
+function handleRelationClick(relationId?: number) {
+  if (relationId !== undefined) {
+    // Toggle the selection if clicking the same relation
+    if (selectedRelationId.value === relationId) {
+      selectedRelationId.value = null;
+    } else {
+      selectedRelationId.value = relationId;
+    }
+    scrollToRelation(relationId);
+  }
+}
+
 function scrollToRelation(relationId?: number) {
   if (relationId !== undefined) {
+    // Update the selected relation
+    selectedRelationId.value = relationId;
     emit('scrollToRelation', relationId);
   }
 }
+
+function clearSelectedRelation() {
+  selectedRelationId.value = null;
+}
+
+// Expose methods to parent components
+defineExpose({
+  scrollToRelation,
+  clearSelectedRelation
+});
 </script>

@@ -33,11 +33,11 @@
       <div v-if="activeTab === 'full-text'" class="flex flex-col gap-8">
         <div class="card bg-base-100 shadow-xl">
           <div class="card-body">
-            <h2 class="card-title">Full Text</h2>
-            <HighlightedText 
+            <h2 class="card-title">Full Text</h2>            <HighlightedText 
               :text="document.full_text" 
               :relations="document.intra_sentential_relations"
               @scroll-to-relation="scrollToRelation"
+              ref="highlightedTextRef"
             />
           </div>
         </div>
@@ -109,6 +109,7 @@ const isLoading = computed(() => documentStore.isLoading);
 const error = computed(() => documentStore.error);
 const activeTab = ref('full-text');
 const relationsListRef = ref(null);
+const highlightedTextRef = ref(null);
 
 function setActiveTab(tab: string) {
   activeTab.value = tab;
@@ -131,7 +132,6 @@ function scrollToRelation(relationId: number) {
 
 function scrollToText(relation: Node) {
   // Implement scrolling to the text that contains the relation
-  // This could involve finding the relation in the text and scrolling to it
   const text = relation.text;
   if (text) {
     // First, make sure we're in the full text view
@@ -139,12 +139,14 @@ function scrollToText(relation: Node) {
     
     // Then find and scroll to the text in the document
     nextTick(() => {
+      // Set the selected relation in the HighlightedText component
+      if (highlightedTextRef.value && relation.id) {
+        (highlightedTextRef.value as any).scrollToRelation(relation.id);
+      }
+      
       const textElement = window.document.querySelector('.prose p');
       if (textElement) {
         textElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // You might want to highlight the text temporarily
-        // This is just a basic implementation - you could enhance it
       }
     });
   }
