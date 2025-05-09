@@ -9,6 +9,17 @@ const router = createRouter({
       name: 'home',
       component: HomeView,
     },
+    {
+      path: '/document/:filename',
+      name: 'document',
+      component: () => import('../views/DocumentView.vue'),
+      props: true
+    },
+    {
+      path: '/relations',
+      name: 'relations',
+      component: () => import('../views/RelationsExplorerView.vue')
+    }
   ],
 })
 
