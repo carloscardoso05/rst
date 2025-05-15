@@ -206,7 +206,7 @@
           </div>
         </template>
         <div v-else class="no-selection">
-          <el-empty description="Select a document or relation type to view details" />
+          <el-empty description="Selecione um documento para ver os detalhes" />
         </div>
       </el-main>
     </el-container>
